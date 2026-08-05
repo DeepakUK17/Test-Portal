@@ -1,0 +1,552 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Module 1 — Authentication
+enum Role {
+  ADMIN
+  FACULTY
+  STUDENT
+}
+
+enum AccountStatus {
+  ACTIVE
+  DISABLED
+  LOCKED
+  PENDING
+}
+
+model User {
+  id                  String        @id @default(uuid())
+  email               String        @unique
+  passwordHash        String?
+  role                Role          @default(STUDENT)
+  firstLogin          Boolean       @default(true)
+  accountStatus       AccountStatus @default(ACTIVE)
+  failedLoginAttempts Int           @default(0)
+  lastLogin           DateTime?
+  passwordChangedAt   DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  deletedAt           DateTime?
+
+  Student   Student?
+  Faculty   Faculty?
+  AuditLogs AuditLog[]
+}
+
+// Module 2 — Academic Structure
+model Department {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  hodName   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  Students        Student[]
+  Faculty         Faculty[]
+  StudentGroups   StudentGroup[]
+  TestAssignments TestAssignment[]
+  Sections        Section[]
+  Subjects        Subject[]
+}
+
+model StudyYear {
+  id         String @id @default(uuid())
+  yearNumber Int    @unique // 1, 2, 3, 4
+
+  Students        Student[]
+  StudentGroups   StudentGroup[]
+  TestAssignments TestAssignment[]
+  Sections        Section[]
+}
+
+model Section {
+  id           String     @id @default(uuid())
+  name         String // A, B, C
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  studyYearId  String
+  studyYear    StudyYear  @relation(fields: [studyYearId], references: [id])
+  semesterId   String
+  semester     Semester   @relation(fields: [semesterId], references: [id])
+
+  Students        Student[]
+  StudentGroups   StudentGroup[]
+  TestAssignments TestAssignment[]
+  tests           Test[]
+
+  @@unique([name, departmentId, studyYearId, semesterId])
+}
+
+model Subject {
+  id           String     @id @default(uuid())
+  code         String     @unique
+  name         String
+  credits      Int
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  semesterId   String
+  semester     Semester   @relation(fields: [semesterId], references: [id])
+  tests        Test[]
+}
+
+model Semester {
+  id     String @id @default(uuid())
+  number Int    @unique // 1 to 8
+
+  Students Student[]
+  Sections Section[]
+  Subjects Subject[]
+}
+
+model AcademicYear {
+  id    String @id @default(uuid())
+  label String @unique // e.g. "2026-2027"
+}
+
+// Module 3 & 4 — Users (Students & Faculty)
+model Student {
+  id           String     @id @default(uuid())
+  userId       String     @unique
+  user         User       @relation(fields: [userId], references: [id])
+  rollNumber   String     @unique
+  fullName     String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  studyYearId  String
+  studyYear    StudyYear  @relation(fields: [studyYearId], references: [id])
+  sectionId    String?
+  section      Section?   @relation(fields: [sectionId], references: [id])
+  semesterId   String
+  semester     Semester   @relation(fields: [semesterId], references: [id])
+  phone        String?
+  photoUrl     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+
+  GroupMemberships StudentGroupMember[]
+  TestAssignments  TestAssignment[]
+  TestSessions     StudentTest[]
+}
+
+model Faculty {
+  id           String     @id @default(uuid())
+  userId       String     @unique
+  user         User       @relation(fields: [userId], references: [id])
+  facultyCode  String     @unique
+  name         String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  designation  String?
+  phone        String?
+  photoUrl     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
+}
+
+// Module 5 — Student Groups
+enum GroupType {
+  AUTO
+  CUSTOM
+}
+
+model StudentGroup {
+  id           String      @id @default(uuid())
+  groupName    String
+  description  String?
+  type         GroupType   @default(CUSTOM)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  studyYearId  String?
+  studyYear    StudyYear?  @relation(fields: [studyYearId], references: [id])
+  sectionId    String?
+  section      Section?    @relation(fields: [sectionId], references: [id])
+  createdBy    String? // Faculty ID or Admin ID
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  Members         StudentGroupMember[]
+  TestAssignments TestAssignment[]
+  tests           Test[]
+}
+
+model StudentGroupMember {
+  groupId   String
+  group     StudentGroup @relation(fields: [groupId], references: [id])
+  studentId String
+  student   Student      @relation(fields: [studentId], references: [id])
+
+  @@id([groupId, studentId])
+}
+
+// Module 6 — Question Bank
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionType {
+  PROGRAMMING
+  MCQ
+  SQL
+  DEBUGGING
+  OUTPUT
+  FILL_BLANK
+}
+
+enum QuestionStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model Question {
+  id           String         @id @default(uuid())
+  title        String
+  slug         String         @unique
+  description  String
+  difficulty   Difficulty
+  questionType QuestionType
+  topic        String?
+  marks        Int            @default(10)
+  timeLimit    Int            @default(2) // in seconds
+  memoryLimit  Int            @default(256) // in MB
+  createdBy    String // User ID of creator
+  version      Int            @default(1)
+  status       QuestionStatus @default(DRAFT)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+
+  Versions           QuestionVersion[]
+  ProgrammingDetails ProgrammingDetails?
+  McqOptions         McqOption[]
+  TestCases          TestCase[]
+  Languages          QuestionLanguage[]
+  TagMappings        QuestionTagMapping[]
+  TestQuestions      TestQuestion[]
+  Submissions        Submission[]
+}
+
+model QuestionVersion {
+  id              String   @id @default(uuid())
+  questionId      String
+  question        Question @relation(fields: [questionId], references: [id])
+  versionNumber   Int
+  contentSnapshot Json // Store entire question state
+  createdAt       DateTime @default(now())
+}
+
+model ProgrammingDetails {
+  questionId   String   @id
+  question     Question @relation(fields: [questionId], references: [id])
+  inputFormat  String?
+  outputFormat String?
+  constraints  String?
+  sampleInput  String?
+  sampleOutput String?
+  explanation  String?
+}
+
+model McqOption {
+  id         String   @id @default(uuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  optionText String
+  isCorrect  Boolean  @default(false)
+}
+
+enum TestCaseVisibility {
+  SAMPLE
+  VISIBLE
+  HIDDEN
+  EDGE
+}
+
+model TestCase {
+  id              String             @id @default(uuid())
+  questionId      String
+  question        Question           @relation(fields: [questionId], references: [id])
+  input           String
+  expectedOutput  String
+  visibility      TestCaseVisibility @default(HIDDEN)
+  weightage       Int                @default(10)
+  executionOrder  Int                @default(1)
+  timeoutOverride Int? // Option to override default timeout per case
+
+  Results SubmissionTestCaseResult[]
+}
+
+enum Language {
+  C
+  CPP
+  JAVA
+  PYTHON
+}
+
+model QuestionLanguage {
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  language   Language
+  isTemplate Boolean  @default(false)
+  headerCode String?  @db.Text
+  bodyCode   String?  @db.Text
+  footerCode String?  @db.Text
+
+  @@id([questionId, language])
+}
+
+model QuestionTag {
+  id      String @id @default(uuid())
+  tagName String @unique
+
+  Mappings QuestionTagMapping[]
+}
+
+model QuestionTagMapping {
+  questionId String
+  question   Question    @relation(fields: [questionId], references: [id])
+  tagId      String
+  tag        QuestionTag @relation(fields: [tagId], references: [id])
+
+  @@id([questionId, tagId])
+}
+
+// Module 7 — Tests
+enum TestStatus {
+  DRAFT
+  PUBLISHED
+  RUNNING
+  COMPLETED
+  ARCHIVED
+}
+
+model Test {
+  id                String     @id @default(uuid())
+  title             String
+  description       String?
+  duration          Int // in minutes
+  startTime         DateTime?
+  endTime           DateTime?
+  passwordHash      String?
+  passingPercentage Int        @default(40)
+  maximumMarks      Int        @default(100)
+  shuffleQuestions  Boolean    @default(false)
+  shuffleMcq        Boolean    @default(false)
+  allowRun          Boolean    @default(true) // Allow running code before final submit
+  showResult        Boolean    @default(false) // Show result immediately after test
+  maxAttempts       Int        @default(1)
+  allowedLanguages  String[]   @default(["c", "cpp", "java", "python", "javascript"])
+  warningCount      Int        @default(3)
+  autoSubmitOnWarning Boolean  @default(true)
+  status            TestStatus @default(DRAFT)
+  createdBy         String // User ID
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  deletedAt         DateTime?
+
+  subjectId String?
+  subject   Subject?      @relation(fields: [subjectId], references: [id])
+  groupId   String?
+  group     StudentGroup? @relation(fields: [groupId], references: [id])
+  sectionId String?
+  section   Section?      @relation(fields: [sectionId], references: [id])
+
+  Questions       TestQuestion[]
+  Assignments     TestAssignment[]
+  StudentSessions StudentTest[]
+}
+
+model TestQuestion {
+  testId       String
+  test         Test     @relation(fields: [testId], references: [id])
+  questionId   String
+  question     Question @relation(fields: [questionId], references: [id])
+  displayOrder Int
+  marks        Int
+
+  @@id([testId, questionId])
+}
+
+enum AssignmentType {
+  GROUP
+  SECTION
+  YEAR
+  INDIVIDUAL
+}
+
+model TestAssignment {
+  id             String         @id @default(uuid())
+  testId         String
+  test           Test           @relation(fields: [testId], references: [id])
+  assignmentType AssignmentType
+  groupId        String?
+  group          StudentGroup?  @relation(fields: [groupId], references: [id])
+  studentId      String?
+  student        Student?       @relation(fields: [studentId], references: [id])
+  departmentId   String?
+  department     Department?    @relation(fields: [departmentId], references: [id])
+  sectionId      String?
+  section        Section?       @relation(fields: [sectionId], references: [id])
+  studyYearId    String?
+  studyYear      StudyYear?     @relation(fields: [studyYearId], references: [id])
+}
+
+// Module 8 — Student Test Session
+enum SessionStatus {
+  NOT_STARTED
+  RUNNING
+  SUBMITTED
+  AUTO_SUBMITTED
+  EXPIRED
+}
+
+model StudentTest {
+  id                  String        @id @default(uuid())
+  studentId           String
+  student             Student       @relation(fields: [studentId], references: [id])
+  testId              String
+  test                Test          @relation(fields: [testId], references: [id])
+  startedAt           DateTime?
+  submittedAt         DateTime?
+  remainingTime       Int? // in seconds
+  status              SessionStatus @default(NOT_STARTED)
+  warningCount        Int           @default(0)
+  ipAddress           String?
+  browser             String?
+  device              String?
+  fullscreenExitCount Int           @default(0)
+  isPasswordVerified  Boolean       @default(false)
+
+  Submissions Submission[]
+  Warnings    Warning[]
+  Result      Result?
+}
+
+// Module 9 — Submissions
+enum SubmissionType {
+  RUN
+  FINAL
+}
+
+enum CompilerStatus {
+  PENDING
+  ACCEPTED
+  WRONG_ANSWER
+  TIME_LIMIT_EXCEEDED
+  RUNTIME_ERROR
+  COMPILATION_ERROR
+}
+
+model Submission {
+  id             String         @id @default(uuid())
+  studentTestId  String
+  studentTest    StudentTest    @relation(fields: [studentTestId], references: [id])
+  questionId     String
+  question       Question       @relation(fields: [questionId], references: [id])
+  language       Language
+  sourceCode     String
+  compilerStatus CompilerStatus @default(PENDING)
+  executionTime  Float? // in seconds
+  memoryUsed     Float? // in MB
+  score          Int            @default(0)
+  submissionType SubmissionType @default(RUN)
+  submittedAt    DateTime       @default(now())
+
+  TestCaseResults SubmissionTestCaseResult[]
+}
+
+model SubmissionTestCaseResult {
+  submissionId  String
+  submission    Submission     @relation(fields: [submissionId], references: [id])
+  testCaseId    String
+  testCase      TestCase       @relation(fields: [testCaseId], references: [id])
+  status        CompilerStatus
+  executionTime Float?
+  memory        Float?
+  actualOutput  String?
+
+  @@id([submissionId, testCaseId])
+}
+
+// Module 10 — Warnings
+enum WarningType {
+  TAB_SWITCH
+  FULLSCREEN_EXIT
+  WINDOW_BLUR
+  NETWORK_LOSS
+}
+
+model Warning {
+  id            String      @id @default(uuid())
+  studentTestId String
+  studentTest   StudentTest @relation(fields: [studentTestId], references: [id])
+  warningType   WarningType
+  timestamp     DateTime    @default(now())
+  details       String?
+}
+
+// Module 11 — Results
+enum ResultStatus {
+  PASS
+  FAIL
+}
+
+model Result {
+  studentTestId String       @id
+  studentTest   StudentTest  @relation(fields: [studentTestId], references: [id])
+  totalMarks    Int          @default(0)
+  percentage    Float        @default(0.0)
+  rank          Int?
+  resultStatus  ResultStatus
+}
+
+// Module 12 — Audit Logs
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  timestamp DateTime @default(now())
+  ipAddress String?
+  browser   String?
+  details   Json?
+}
+
+// Module 13 — Notifications
+enum RecipientType {
+  STUDENT
+  FACULTY
+  ADMIN
+  GROUP
+  ALL
+}
+
+model Notification {
+  id            String        @id @default(uuid())
+  title         String
+  message       String
+  recipientType RecipientType
+  recipientId   String? // nullable if ALL
+  isRead        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+}
+
+// Module 14 — System Settings
+model SystemSetting {
+  settingKey   String  @id
+  settingValue String
+  description  String?
+}
