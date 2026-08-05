@@ -66,7 +66,7 @@ export class ExecutionService {
         if (this.isLinux) {
             // Linux Production: Run as sandboxuser with limits
             // 256MB = 262144 KB
-            return `sudo -u sandboxuser timeout ${this.TIMEOUT_SECONDS}s bash -c "ulimit -v 262144; ${baseCmd}"`;
+            return `runuser -u sandboxuser -- timeout ${this.TIMEOUT_SECONDS}s bash -c "ulimit -v 262144; ${baseCmd}"`;
         } else {
             // Windows/Mac Development: Run normally
             // child_process.exec handles the timeout in JS
