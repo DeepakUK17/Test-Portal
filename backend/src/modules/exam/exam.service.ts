@@ -147,7 +147,7 @@ export class ExamService {
         // Handle custom input execution
         if (customInput !== undefined) {
             const execResults = await ExecutionService.executeCode(language, executionCode, [customInput]);
-            const execResult = execResults[0];
+            const execResult = execResults[0]!;
             results.push({
                 testCaseId: 'custom',
                 input: customInput,
@@ -163,8 +163,8 @@ export class ExamService {
         const execResults = await ExecutionService.executeCode(language, executionCode, inputs);
 
         for (let i = 0; i < question.TestCases.length; i++) {
-            const tc = question.TestCases[i];
-            const execResult = execResults[i];
+            const tc = question.TestCases[i]!;
+            const execResult = execResults[i]!;
             results.push({
                 testCaseId: tc.id,
                 input: tc.input,
@@ -206,8 +206,8 @@ export class ExamService {
         const execResults = await ExecutionService.executeCode(language, executionCode, inputs);
 
         for (let i = 0; i < question.TestCases.length; i++) {
-            const tc = question.TestCases[i];
-            const execResult = execResults[i];
+            const tc = question.TestCases[i]!;
+            const execResult = execResults[i]!;
             const isSuccess = execResult.success && execResult.output.trim() === tc.expectedOutput.trim();
             if (isSuccess) passed++;
 
