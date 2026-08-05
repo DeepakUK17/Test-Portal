@@ -27,6 +27,7 @@ export class ExecutionService {
         
         try {
             fs.mkdirSync(tmpDir, { recursive: true });
+            fs.chmodSync(tmpDir, 0o777); // Give sandboxuser permission to write (e.g. for compiled binaries)
             
             // Set up files
             const inputPath = path.join(tmpDir, 'input.txt');
@@ -64,9 +65,8 @@ export class ExecutionService {
 
     private static getExecutionCommand(baseCmd: string): string {
         if (this.isLinux) {
-            // Linux Production: Run as sandboxuser with limits
-            // 256MB = 262144 KB
-            return `runuser -u sandboxuser -- timeout ${this.TIMEOUT_SECONDS}s bash -c "ulimit -v 262144; ${baseCmd}"`;
+            // We rely on 'timeout' for CPU time limit, and Render's container limits for memory.
+            return `runuser -u sandboxuser -- timeout ${this.TIMEOUT_SECONDS}s bash -c "${baseCmd}"`;
         } else {
             // Windows/Mac Development: Run normally
             // child_process.exec handles the timeout in JS
