@@ -19,7 +19,7 @@ RUN npm install
 COPY . .
 
 # Generate Prisma client first so TypeScript knows the types
-RUN npx prisma generate
+RUN DATABASE_URL="postgresql://dummy:5432/dummy" npx prisma generate
 
 # Build the TypeScript project
 RUN npm run build
