@@ -7,8 +7,10 @@ Welcome! This guide is designed to help you test the KAHE Coding Platform end-to
 ## 🔑 1. Logging In
 
 The platform operates on a Role-Based Dashboard. Depending on your account, you will be redirected to the Admin, Faculty, or Student panel.
-- **URL:** [Your Hosted Application URL]
-- **Admin Login:** Ask your IT administrator for the primary admin email and password.
+- **URL:** [https://test-portal-sage.vercel.app/](https://test-portal-sage.vercel.app/)
+- **Admin Login:** 
+  - **Email:** admin@kahedu.edu.in
+  - **Password:** Admin@kahedu
 
 ---
 
@@ -94,8 +96,11 @@ Log out of the Faculty account and log in using the **Student** credentials you 
 To thoroughly test the platform's security, try the following as a student:
 1. **Try Copy-Pasting:** Attempt to copy code from outside and paste it into the editor (using Ctrl+V or Right-Click). The system will strictly block you and show an error.
 2. **Try Switching Tabs:** Open a new browser tab or minimize the window. A severe warning will cover your screen: *"Exam rule violation detected!"*
-3. **Trigger Auto-Submit:** If you configured the test to allow 3 warnings, intentionally switch tabs 3 times. On the 3rd strike, the system will lock your screen and automatically submit your test, redirecting you to the final result page.
+3. **Use Snipping Tool (Print Screen):** Press PRTSC. The screen blur will trigger a warning. Note that there is a **3-second throttle** built into the engine to prevent rapid back-to-back false positives from single actions like taking a screenshot.
+4. **Trigger Auto-Submit:** If you configured the test to allow 3 warnings, intentionally switch tabs 3 times. On the 3rd strike, the system will lock your screen and automatically submit your test, redirecting you to the final result page.
 
+### D. Testing Code Execution
+1. **High-Speed Execution Engine:** Write code in Python, C++, Java, or C and submit it. The platform uses an advanced execution engine that batches test cases and compiles your code only once, running it securely inside an isolated, unprivileged Linux sandbox with strict resource limits. Execution across all test cases generally completes in just 1-2 seconds!
 ---
 
 ## 📊 5. Viewing Reports
