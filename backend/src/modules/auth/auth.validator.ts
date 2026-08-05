@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+export const checkEmailSchema = z.object({
+    body: z.object({
+        email: z.string().email('Invalid email address').endsWith('@kahedu.edu.in', 'Must use a valid college email'),
+    }),
+});
+
 export const loginSchema = z.object({
     body: z.object({
         email: z.string().email('Invalid email address').endsWith('@kahedu.edu.in', 'Must use a valid college email'),

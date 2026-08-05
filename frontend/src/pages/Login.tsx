@@ -8,12 +8,30 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 
 export const Login = () => {
+  const [step, setStep] = useState<'email' | 'password'>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
+
+  const checkEmailMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/auth/check-email', { email });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      if (data.data.requiresPasswordSetup) {
+        navigate('/setup-password', { state: { setupToken: data.data.setupToken } });
+      } else {
+        setStep('password');
+      }
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.message || 'Email not found. Please try again.');
+    },
+  });
 
   const loginMutation = useMutation({
     mutationFn: async () => {
@@ -43,7 +61,11 @@ export const Login = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    loginMutation.mutate();
+    if (step === 'email') {
+        checkEmailMutation.mutate();
+    } else {
+        loginMutation.mutate();
+    }
   };
 
   return (
@@ -69,28 +91,31 @@ export const Login = () => {
                 placeholder="m.name@kahedu.edu.in"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={step === 'password'}
                 required
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700" htmlFor="password">Password</label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            {step === 'password' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700" htmlFor="password">Password</label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <Button 
               className="w-full" 
               type="submit" 
-              disabled={loginMutation.isPending}
+              disabled={checkEmailMutation.isPending || loginMutation.isPending}
             >
-              {loginMutation.isPending ? 'Logging in...' : 'Sign In'}
+              {checkEmailMutation.isPending || loginMutation.isPending ? 'Processing...' : (step === 'email' ? 'Continue' : 'Sign In')}
             </Button>
           </CardFooter>
         </form>

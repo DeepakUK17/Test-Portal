@@ -4,6 +4,27 @@ import { generateAccessToken, generateRefreshToken } from '../../utils/jwt';
 import jwt from 'jsonwebtoken';
 
 export class AuthService {
+    static async checkEmail(email: string) {
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        if (user.firstLogin || !user.passwordHash) {
+            const setupToken = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'dev_secret_change_in_production', { expiresIn: '15m' });
+            return {
+                requiresPasswordSetup: true,
+                setupToken,
+                message: 'Password setup required'
+            };
+        }
+
+        return {
+            requiresPasswordSetup: false
+        };
+    }
+
     static async login(email: string, passwordPlain: string) {
         const user = await prisma.user.findUnique({ where: { email } });
 

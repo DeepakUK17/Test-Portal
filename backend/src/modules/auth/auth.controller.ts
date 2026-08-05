@@ -3,22 +3,20 @@ import { AuthService } from './auth.service';
 import { verifyRefreshToken, generateAccessToken } from '../../utils/jwt';
 
 export class AuthController {
+    static async checkEmail(req: Request, res: Response): Promise<void> {
+        try {
+            const { email } = req.body;
+            const result = await AuthService.checkEmail(email);
+            res.json({ success: true, data: result });
+        } catch (error: any) {
+            res.status(404).json({ success: false, message: error.message || 'User not found' });
+        }
+    }
+
     static async login(req: Request, res: Response): Promise<void> {
         try {
             const { email, password } = req.body;
             const result = await AuthService.login(email, password);
-            
-            if (result.requiresPasswordSetup) {
-                res.json({
-                    success: true,
-                    data: {
-                        requiresPasswordSetup: true,
-                        setupToken: result.setupToken,
-                        message: result.message
-                    }
-                });
-                return;
-            }
 
             // Set refresh token in HTTP-only cookie
             res.cookie('refreshToken', result.refreshToken, {
