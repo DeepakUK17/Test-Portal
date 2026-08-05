@@ -28,13 +28,11 @@ export class AuthService {
         const isPasswordValid = await bcrypt.compare(passwordPlain, user.passwordHash);
 
         if (!isPasswordValid) {
-            // Increment failed login attempts
+            // Increment failed login attempts (auto-lock disabled)
             await prisma.user.update({
                 where: { id: user.id },
                 data: {
-                    failedLoginAttempts: { increment: 1 },
-                    // Lock account if failed attempts reach 5
-                    accountStatus: user.failedLoginAttempts >= 4 ? 'LOCKED' : 'ACTIVE'
+                    failedLoginAttempts: { increment: 1 }
                 }
             });
             throw new Error('Invalid credentials');
