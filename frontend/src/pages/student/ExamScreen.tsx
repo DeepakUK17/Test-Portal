@@ -93,7 +93,7 @@ export const ExamScreen = () => {
         const handleWarning = (type: 'TAB_SWITCH' | 'FULLSCREEN_EXIT') => {
             if (isSubmittingRef.current) return;
             const now = Date.now();
-            if (now - lastWarningTimeRef.current < 2000) return; // Throttle warnings to max 1 per 2 seconds
+            if (now - lastWarningTimeRef.current < 3000) return; // Throttle warnings to max 1 per 3 seconds
             lastWarningTimeRef.current = now;
 
             warningMutation.mutate({ attemptId: attemptId!, type }, {

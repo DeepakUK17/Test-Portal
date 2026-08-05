@@ -2,7 +2,7 @@ FROM node:18-bullseye
 
 # Install build dependencies, GCC, Java, and Python
 RUN apt-get update && \
-    apt-get install -y gcc g++ default-jdk python3 && \
+    apt-get install -y gcc g++ default-jdk python3 sudo && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
