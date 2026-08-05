@@ -18,11 +18,11 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Generate Prisma client first so TypeScript knows the types
+RUN npx prisma generate
+
 # Build the TypeScript project
 RUN npm run build
-
-# Generate Prisma client
-RUN npx prisma generate
 
 EXPOSE 3000
 
