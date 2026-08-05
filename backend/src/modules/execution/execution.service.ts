@@ -9,7 +9,7 @@ const execPromise = util.promisify(exec);
 
 export type Language = 'c' | 'cpp' | 'java' | 'python';
 
-interface ExecutionResult {
+export interface ExecutionResult {
     success: boolean;
     output: string;
     error?: string;
@@ -21,7 +21,7 @@ export class ExecutionService {
     // Timeout of 5s for the execution
     private static TIMEOUT_SECONDS = 5;
 
-    static async executeCode(language: Language, sourceCode: string, input: string): Promise<ExecutionResult> {
+    static async executeCode(language: Language, sourceCode: string, inputs: string[]): Promise<ExecutionResult[]> {
         const runId = crypto.randomUUID();
         const tmpDir = path.join(os.tmpdir(), `code-exec-${runId}`);
         
@@ -29,30 +29,26 @@ export class ExecutionService {
             fs.mkdirSync(tmpDir, { recursive: true });
             fs.chmodSync(tmpDir, 0o777); // Give sandboxuser permission to write (e.g. for compiled binaries)
             
-            // Set up files
-            const inputPath = path.join(tmpDir, 'input.txt');
-            fs.writeFileSync(inputPath, input || '');
-
-            let result: ExecutionResult;
+            let results: ExecutionResult[];
 
             switch (language) {
                 case 'c':
-                    result = await this.executeC(tmpDir, sourceCode, inputPath);
+                    results = await this.executeC(tmpDir, sourceCode, inputs);
                     break;
                 case 'cpp':
-                    result = await this.executeCpp(tmpDir, sourceCode, inputPath);
+                    results = await this.executeCpp(tmpDir, sourceCode, inputs);
                     break;
                 case 'java':
-                    result = await this.executeJava(tmpDir, sourceCode, inputPath, runId);
+                    results = await this.executeJava(tmpDir, sourceCode, inputs, runId);
                     break;
                 case 'python':
-                    result = await this.executePython(tmpDir, sourceCode, inputPath);
+                    results = await this.executePython(tmpDir, sourceCode, inputs);
                     break;
                 default:
                     throw new Error('Unsupported language');
             }
 
-            return result;
+            return results;
         } finally {
             // Cleanup
             try {
@@ -101,64 +97,90 @@ export class ExecutionService {
         }
     }
 
-    private static async executeC(tmpDir: string, sourceCode: string, inputPath: string): Promise<ExecutionResult> {
+    private static async executeC(tmpDir: string, sourceCode: string, inputs: string[]): Promise<ExecutionResult[]> {
         const sourcePath = path.join(tmpDir, 'main.c');
         const outName = this.isLinux ? 'a.out' : 'a.exe';
         fs.writeFileSync(sourcePath, sourceCode);
 
-        // Compile
+        // Compile once
         try {
             await execPromise(`gcc main.c -o ${outName}`, { cwd: tmpDir });
         } catch (err: any) {
-            return { success: false, output: '', error: `Compilation Error:\n${err.stderr}`, executionTimeMs: 0 };
+            const errResult = { success: false, output: '', error: `Compilation Error:\n${err.stderr}`, executionTimeMs: 0 };
+            return inputs.map(() => errResult);
         }
 
-        // Execute
-        const cmd = this.isLinux ? this.getExecutionCommand(`./${outName} < input.txt`) : this.getExecutionCommand(`${outName} < input.txt`);
-        return this.runProcess(cmd, tmpDir);
+        // Execute multiple
+        const results: ExecutionResult[] = [];
+        for (let i = 0; i < inputs.length; i++) {
+            const inputPath = path.join(tmpDir, `input_${i}.txt`);
+            fs.writeFileSync(inputPath, inputs[i] || '');
+            const cmd = this.isLinux ? this.getExecutionCommand(`./${outName} < input_${i}.txt`) : this.getExecutionCommand(`${outName} < input_${i}.txt`);
+            results.push(await this.runProcess(cmd, tmpDir));
+        }
+        return results;
     }
 
-    private static async executeCpp(tmpDir: string, sourceCode: string, inputPath: string): Promise<ExecutionResult> {
+    private static async executeCpp(tmpDir: string, sourceCode: string, inputs: string[]): Promise<ExecutionResult[]> {
         const sourcePath = path.join(tmpDir, 'main.cpp');
         const outName = this.isLinux ? 'a.out' : 'a.exe';
         fs.writeFileSync(sourcePath, sourceCode);
 
-        // Compile
+        // Compile once
         try {
             await execPromise(`g++ main.cpp -o ${outName}`, { cwd: tmpDir });
         } catch (err: any) {
-            return { success: false, output: '', error: `Compilation Error:\n${err.stderr}`, executionTimeMs: 0 };
+            const errResult = { success: false, output: '', error: `Compilation Error:\n${err.stderr}`, executionTimeMs: 0 };
+            return inputs.map(() => errResult);
         }
 
-        // Execute
-        const cmd = this.isLinux ? this.getExecutionCommand(`./${outName} < input.txt`) : this.getExecutionCommand(`${outName} < input.txt`);
-        return this.runProcess(cmd, tmpDir);
+        // Execute multiple
+        const results: ExecutionResult[] = [];
+        for (let i = 0; i < inputs.length; i++) {
+            const inputPath = path.join(tmpDir, `input_${i}.txt`);
+            fs.writeFileSync(inputPath, inputs[i] || '');
+            const cmd = this.isLinux ? this.getExecutionCommand(`./${outName} < input_${i}.txt`) : this.getExecutionCommand(`${outName} < input_${i}.txt`);
+            results.push(await this.runProcess(cmd, tmpDir));
+        }
+        return results;
     }
 
-    private static async executeJava(tmpDir: string, sourceCode: string, inputPath: string, runId: string): Promise<ExecutionResult> {
-        // Java requires class name to match file name. We assume public class Main.
+    private static async executeJava(tmpDir: string, sourceCode: string, inputs: string[], runId: string): Promise<ExecutionResult[]> {
         const sourcePath = path.join(tmpDir, 'Main.java');
         fs.writeFileSync(sourcePath, sourceCode);
 
-        // Compile
+        // Compile once
         try {
             await execPromise(`javac Main.java`, { cwd: tmpDir });
         } catch (err: any) {
-            return { success: false, output: '', error: `Compilation Error:\n${err.stderr}`, executionTimeMs: 0 };
+            const errResult = { success: false, output: '', error: `Compilation Error:\n${err.stderr}`, executionTimeMs: 0 };
+            return inputs.map(() => errResult);
         }
 
-        // Execute
-        const cmd = this.isLinux ? this.getExecutionCommand(`java Main < input.txt`) : `java Main < input.txt`;
-        return this.runProcess(cmd, tmpDir);
+        // Execute multiple
+        const results: ExecutionResult[] = [];
+        for (let i = 0; i < inputs.length; i++) {
+            const inputPath = path.join(tmpDir, `input_${i}.txt`);
+            fs.writeFileSync(inputPath, inputs[i] || '');
+            const cmd = this.isLinux ? this.getExecutionCommand(`java Main < input_${i}.txt`) : `java Main < input_${i}.txt`;
+            results.push(await this.runProcess(cmd, tmpDir));
+        }
+        return results;
     }
 
-    private static async executePython(tmpDir: string, sourceCode: string, inputPath: string): Promise<ExecutionResult> {
+    private static async executePython(tmpDir: string, sourceCode: string, inputs: string[]): Promise<ExecutionResult[]> {
         const sourcePath = path.join(tmpDir, 'main.py');
         fs.writeFileSync(sourcePath, sourceCode);
 
-        // Execute (python3 on linux, python on windows usually)
         const pyCmd = this.isLinux ? 'python3' : 'python';
-        const cmd = this.isLinux ? this.getExecutionCommand(`${pyCmd} main.py < input.txt`) : `${pyCmd} main.py < input.txt`;
-        return this.runProcess(cmd, tmpDir);
+        const results: ExecutionResult[] = [];
+        
+        for (let i = 0; i < inputs.length; i++) {
+            const inputPath = path.join(tmpDir, `input_${i}.txt`);
+            fs.writeFileSync(inputPath, inputs[i] || '');
+            const cmd = this.isLinux ? this.getExecutionCommand(`${pyCmd} main.py < input_${i}.txt`) : `${pyCmd} main.py < input_${i}.txt`;
+            results.push(await this.runProcess(cmd, tmpDir));
+        }
+        return results;
     }
 }
