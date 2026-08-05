@@ -86,12 +86,12 @@ const DepartmentsTab = () => {
             <CardContent>
               <div className="flex gap-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
                 <div className="flex flex-col">
-                  <span className="font-semibold text-gray-900">{dept._count?.students || 0}</span>
+                  <span className="font-semibold text-gray-900">{dept._count?.Students || 0}</span>
                   <span className="text-xs">Students</span>
                 </div>
                 <div className="w-px bg-gray-200"></div>
                 <div className="flex flex-col">
-                  <span className="font-semibold text-gray-900">{dept._count?.faculty || 0}</span>
+                  <span className="font-semibold text-gray-900">{dept._count?.Faculty || 0}</span>
                   <span className="text-xs">Faculty</span>
                 </div>
               </div>
