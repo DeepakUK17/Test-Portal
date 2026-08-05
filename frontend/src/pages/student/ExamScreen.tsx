@@ -88,8 +88,14 @@ export const ExamScreen = () => {
 
     // Comprehensive Anti-Cheat Proctoring
     useEffect(() => {
+        const lastWarningTimeRef = { current: 0 };
+
         const handleWarning = (type: 'TAB_SWITCH' | 'FULLSCREEN_EXIT') => {
             if (isSubmittingRef.current) return;
+            const now = Date.now();
+            if (now - lastWarningTimeRef.current < 2000) return; // Throttle warnings to max 1 per 2 seconds
+            lastWarningTimeRef.current = now;
+
             warningMutation.mutate({ attemptId: attemptId!, type }, {
                 onSuccess: (res: any) => {
                     if (res.data?.submitted) {
