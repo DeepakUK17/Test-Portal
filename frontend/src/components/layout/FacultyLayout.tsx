@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { Users, BookOpen, ClipboardList, BarChart2, LogOut, GraduationCap, Home } from 'lucide-react';
 import { cn } from '../../utils/cn';

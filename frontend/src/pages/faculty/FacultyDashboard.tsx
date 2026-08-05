@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Users, BookOpen, ClipboardList, BarChart2, ArrowRight, GraduationCap } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
-import { useAuthStore } from '../../store/authStore';
 import { useTests } from '../../hooks/useTests';
 import { useGroups } from '../../hooks/useGroups';
 import { useQuestions } from '../../hooks/useQuestions';

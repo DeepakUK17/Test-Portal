@@ -25,7 +25,7 @@ export const useGroup = (id: string) => {
 export const useCreateGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { name: string; departmentId: string }) => {
+    mutationFn: async (data: { name: string; departmentId: string, description?: string }) => {
       await api.post('/groups', data);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups'] })

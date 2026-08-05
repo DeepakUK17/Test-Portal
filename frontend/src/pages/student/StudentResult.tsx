@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from 'react-router-dom';
 import api from '../../services/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { ChevronLeft, CheckCircle2, XCircle, Clock, Database, Laptop, Globe, Info } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Laptop, Globe, Info } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { useState } from 'react';
 

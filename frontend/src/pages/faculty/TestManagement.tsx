@@ -3,7 +3,7 @@ import { useTests, useCreateTest, useUpdateTest, useUpdateTestStatus, useDeleteT
 import { useQuestions } from '../../hooks/useQuestions';
 import { useGroups } from '../../hooks/useGroups';
 import { useSubjects, useSections } from '../../hooks/useAcademic';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { toast } from 'sonner';
 import { Input } from '../../components/ui/Input';

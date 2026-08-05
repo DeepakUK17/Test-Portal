@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuestions, useCreateQuestion, useDeleteQuestion, useQuestion } from '../../hooks/useQuestions';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { toast } from 'sonner';
@@ -256,7 +256,7 @@ const QuestionDetails = ({ id, onBack }: { id: string; onBack: () => void }) => 
                 <CardHeader><CardTitle>Test Cases ({q?.TestCases?.length ?? 0})</CardTitle></CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {q?.TestCases?.map((tc: any, i: number) => (
+                        {q?.TestCases?.map((tc: any) => (
                             <div key={tc.id} className="p-4 border border-gray-100 rounded-xl bg-gray-50 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
