@@ -2,7 +2,7 @@ import { exec } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
 import util from 'util';
 
 const execPromise = util.promisify(exec);
@@ -22,7 +22,7 @@ export class ExecutionService {
     private static TIMEOUT_SECONDS = 5;
 
     static async executeCode(language: Language, sourceCode: string, input: string): Promise<ExecutionResult> {
-        const runId = uuidv4();
+        const runId = crypto.randomUUID();
         const tmpDir = path.join(os.tmpdir(), `code-exec-${runId}`);
         
         try {
