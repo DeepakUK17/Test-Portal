@@ -6,7 +6,7 @@ export interface Department {
   id: string;
   name: string;
   code: string;
-  _count?: { students: number; faculty: number; sections: number; subjects: number };
+  _count?: { Students: number; Faculty: number; sections?: number; subjects?: number };
 }
 
 export interface StudyYear {
