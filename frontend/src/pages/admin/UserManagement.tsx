@@ -58,7 +58,17 @@ const StudentsTab = () => {
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             bulkImportMutation.mutate(e.target.files[0], {
-                onSuccess: (res) => toast.success(`Successfully imported ${res.data.successCount} students. Errors: ${res.data.errors.length}`)
+                onSuccess: (res) => {
+                    const { successCount, errors } = res.data;
+                    if (errors.length > 0) {
+                        toast.error(`Imported ${successCount}. Errors: ${errors.length}`, {
+                            description: errors.map((err: any) => `${err.email || 'Unknown'}: ${err.error}`).join('\n'),
+                            duration: 10000,
+                        });
+                    } else {
+                        toast.success(`Successfully imported ${successCount} students.`);
+                    }
+                }
             });
         }
     };
