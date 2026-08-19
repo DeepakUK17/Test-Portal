@@ -14,7 +14,8 @@ const GroupDetails = ({ groupId, onBack }: { groupId: string; onBack: () => void
     const addMutation = useAddStudentsToGroup();
     const removeMutation = useRemoveStudentFromGroup();
 
-    const [selectedStudentId, setSelectedStudentId] = useState('');
+    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
 
     if (isLoading) return (
         <div className="flex items-center justify-center h-64">
@@ -24,13 +25,14 @@ const GroupDetails = ({ groupId, onBack }: { groupId: string; onBack: () => void
 
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedStudentId) return;
-        addMutation.mutate({ groupId, studentIds: [selectedStudentId] }, {
+        if (selectedStudentIds.length === 0) return;
+        addMutation.mutate({ groupId, studentIds: selectedStudentIds }, {
             onSuccess: () => {
-                toast.success('Student added to group');
-                setSelectedStudentId('');
+                toast.success(`${selectedStudentIds.length} student(s) added to group`);
+                setSelectedStudentIds([]);
+                setSearchQuery('');
             },
-            onError: () => toast.error('Failed to add student')
+            onError: () => toast.error('Failed to add students')
         });
     };
 
@@ -53,7 +55,20 @@ const GroupDetails = ({ groupId, onBack }: { groupId: string; onBack: () => void
     // Members from backend have studentId (Student table PK)
     const memberIds = group?.Members?.map((m: any) => m.studentId) ?? [];
     // availableStudents compares Student.id (not user.id)
-    const availableStudents = students?.filter((s: any) => s.Student && !memberIds.includes(s.Student.id));
+    const availableStudents = students?.filter((s: any) => s.Student && !memberIds.includes(s.Student.id)) || [];
+    
+    const filteredStudents = availableStudents.filter((s: any) => 
+        s.Student?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        s.Student?.rollNumber?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const handleSelectAll = () => {
+        if (selectedStudentIds.length === filteredStudents.length && filteredStudents.length > 0) {
+            setSelectedStudentIds([]);
+        } else {
+            setSelectedStudentIds(filteredStudents.map((s: any) => s.Student.id));
+        }
+    };
 
     return (
         <div className="p-6 md:p-10 space-y-8 max-w-4xl mx-auto">
@@ -88,32 +103,59 @@ const GroupDetails = ({ groupId, onBack }: { groupId: string; onBack: () => void
             <Card className="border-t-4 border-t-blue-500">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <UserPlus className="w-5 h-5 text-blue-600" /> Add Student to Group
+                        <UserPlus className="w-5 h-5 text-blue-600" /> Add Students to Group
                     </CardTitle>
-                    <CardDescription>Select a student not already in this group</CardDescription>
+                    <CardDescription>Select one or more students to add to this group</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleAdd} className="flex gap-4 max-w-md">
-                        <select
-                            className="flex h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={selectedStudentId}
-                            onChange={e => setSelectedStudentId(e.target.value)}
-                            required
-                        >
-                            <option value="">Select a student...</option>
-                                {availableStudents?.map((s: any) => (
-                                <option key={s.Student.id} value={s.Student.id}>
-                                    {s.Student?.fullName} ({s.Student?.rollNumber})
-                                </option>
+                    <form onSubmit={handleAdd} className="flex flex-col gap-4">
+                        <Input 
+                            placeholder="Search students by name or roll number..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        
+                        {availableStudents?.length > 0 && (
+                            <div className="flex justify-between items-center px-1">
+                                <span className="text-sm font-medium text-gray-700">{selectedStudentIds.length} selected</span>
+                                <button type="button" onClick={handleSelectAll} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                    {selectedStudentIds.length === filteredStudents?.length && filteredStudents?.length > 0 ? 'Deselect All' : 'Select All'}
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto bg-white p-2 divide-y divide-gray-100">
+                            {filteredStudents?.map((s: any) => (
+                                <label key={s.Student.id} className="flex items-center p-2 hover:bg-gray-50 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="mr-3 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                        checked={selectedStudentIds.includes(s.Student.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedStudentIds(prev => [...prev, s.Student.id]);
+                                            } else {
+                                                setSelectedStudentIds(prev => prev.filter(id => id !== s.Student.id));
+                                            }
+                                        }}
+                                    />
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-medium text-gray-900">{s.Student?.fullName}</span>
+                                        <span className="text-xs text-gray-500">{s.Student?.rollNumber}</span>
+                                    </div>
+                                </label>
                             ))}
-                        </select>
-                        <Button type="submit" disabled={addMutation.isPending || !selectedStudentId} className="bg-blue-600 hover:bg-blue-700 shrink-0">
-                            Add
+                            {availableStudents?.length === 0 && (
+                                <p className="text-sm text-gray-400 p-4 text-center">All students are already in this group.</p>
+                            )}
+                            {availableStudents?.length > 0 && filteredStudents?.length === 0 && (
+                                <p className="text-sm text-gray-400 p-4 text-center">No students match your search.</p>
+                            )}
+                        </div>
+                        <Button type="submit" disabled={addMutation.isPending || selectedStudentIds.length === 0} className="bg-blue-600 hover:bg-blue-700">
+                            {addMutation.isPending ? 'Adding...' : `Add Selected Students (${selectedStudentIds.length})`}
                         </Button>
                     </form>
-                    {availableStudents?.length === 0 && (
-                        <p className="text-sm text-gray-400 mt-3">All students are already in this group.</p>
-                    )}
                 </CardContent>
             </Card>
 
