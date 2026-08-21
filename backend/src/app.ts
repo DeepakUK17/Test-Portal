@@ -34,7 +34,7 @@ app.use(morgan('dev'));
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+    max: 10000, // Increased to 10000 to accommodate college lab environments (many students sharing one public IP)
     standardHeaders: true,
     legacyHeaders: false,
 });
