@@ -18,8 +18,8 @@ export interface ExecutionResult {
 
 export class ExecutionService {
     private static isLinux = os.platform() === 'linux';
-    // Timeout of 5s for the execution
-    private static TIMEOUT_SECONDS = 5;
+    // Timeout of 15s for the execution to prevent false Time Limit Exceeded errors when server is under heavy load with multiple students running code
+    private static TIMEOUT_SECONDS = 15;
 
     static async executeCode(language: Language, sourceCode: string, inputs: string[]): Promise<ExecutionResult[]> {
         const runId = crypto.randomUUID();
@@ -91,7 +91,7 @@ export class ExecutionService {
             return {
                 success: false,
                 output: error.stdout?.trim() || '',
-                error: isTimeout ? 'Time Limit Exceeded (5 seconds)' : (error.stderr?.trim() || error.message),
+                error: isTimeout ? `Time Limit Exceeded (${this.TIMEOUT_SECONDS} seconds)` : (error.stderr?.trim() || error.message),
                 executionTimeMs: Date.now() - startTime
             };
         }
