@@ -41,10 +41,14 @@ api.interceptors.response.use(
                 // Retry original request with new token
                 originalRequest.headers.Authorization = `Bearer ${accessToken}`;
                 return api(originalRequest);
-            } catch (refreshError) {
-                // If refresh fails, user must log in again
-                localStorage.removeItem('accessToken');
-                window.location.href = '/login';
+            } catch (refreshError: any) {
+                // If refresh fails due to invalid/expired refresh token, user must log in again.
+                // Do NOT redirect on network errors, 500s, or 429s (Too Many Requests), 
+                // to prevent losing unsaved exam code during temporary issues.
+                if (refreshError.response?.status === 401 || refreshError.response?.status === 403) {
+                    localStorage.removeItem('accessToken');
+                    window.location.href = '/login';
+                }
                 return Promise.reject(refreshError);
             }
         }
