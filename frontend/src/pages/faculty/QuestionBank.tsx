@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useQuestions, useCreateQuestion, useDeleteQuestion, useQuestion } from '../../hooks/useQuestions';
+import { useQuestions, useCreateQuestion, useDeleteQuestion, useQuestion, useUpdateQuestion } from '../../hooks/useQuestions';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { toast } from 'sonner';
-import { BookOpen, Plus, ArrowLeft, Trash2, Eye, Code2 } from 'lucide-react';
+import { BookOpen, Plus, ArrowLeft, Trash2, Eye, Code2, Edit2 } from 'lucide-react';
 
 const difficultyConfig: Record<string, { label: string; className: string }> = {
     EASY: { label: 'Easy', className: 'bg-green-100 text-green-700' },
@@ -12,18 +12,27 @@ const difficultyConfig: Record<string, { label: string; className: string }> = {
     HARD: { label: 'Hard', className: 'bg-red-100 text-red-700' },
 };
 
-const QuestionForm = ({ onSubmit, onCancel }: any) => {
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [difficulty, setDifficulty] = useState('EASY');
-    const [testCases, setTestCases] = useState([{ input: '', expectedOutput: '', isHidden: false, marks: 10 }]);
-    const [templates, setTemplates] = useState<Array<{ language: string; isTemplate: boolean; headerCode: string; bodyCode: string; footerCode: string }>>([
-        { language: 'c', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
-        { language: 'cpp', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
-        { language: 'java', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
-        { language: 'python', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
-        { language: 'javascript', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
-    ]);
+const QuestionForm = ({ onSubmit, onCancel, initialData }: any) => {
+    const [title, setTitle] = useState(initialData?.title || '');
+    const [description, setDescription] = useState(initialData?.description || '');
+    const [difficulty, setDifficulty] = useState(initialData?.difficulty || 'EASY');
+    const [testCases, setTestCases] = useState(initialData?.testCases || [{ input: '', expectedOutput: '', isHidden: false, marks: 10 }]);
+    const [templates, setTemplates] = useState<Array<{ language: string; isTemplate: boolean; headerCode: string; bodyCode: string; footerCode: string }>>(() => {
+        const defaultTemplates = [
+            { language: 'c', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
+            { language: 'cpp', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
+            { language: 'java', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
+            { language: 'python', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
+            { language: 'javascript', isTemplate: false, headerCode: '', bodyCode: '', footerCode: '' },
+        ];
+        if (initialData?.templates) {
+            return defaultTemplates.map(dt => {
+                const existing = initialData.templates.find((t: any) => t.language === dt.language);
+                return existing ? existing : dt;
+            });
+        }
+        return defaultTemplates;
+    });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,7 +48,7 @@ const QuestionForm = ({ onSubmit, onCancel }: any) => {
         newCases[index] = { ...newCases[index], [field]: value };
         setTestCases(newCases);
     };
-    const removeTestCase = (index: number) => setTestCases(testCases.filter((_, i) => i !== index));
+    const removeTestCase = (index: number) => setTestCases(testCases.filter((_: any, i: number) => i !== index));
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -279,12 +288,62 @@ const QuestionDetails = ({ id, onBack }: { id: string; onBack: () => void }) => 
     );
 };
 
+const EditQuestion = ({ id, onCancel, onUpdate }: { id: string, onCancel: () => void, onUpdate: (data: any) => void }) => {
+    const { data: q, isLoading } = useQuestion(id);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-gray-400 text-sm animate-pulse">Loading question details...</div>
+            </div>
+        );
+    }
+
+    // Format test cases and templates for editing
+    const formattedQuestion = {
+        ...q,
+        testCases: q?.TestCases?.map((tc: any) => ({
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            isHidden: tc.visibility === 'HIDDEN',
+            marks: tc.weightage
+        })) || [],
+        templates: q?.Languages?.map((l: any) => ({
+            language: l.language.toLowerCase(),
+            isTemplate: l.isTemplate,
+            headerCode: l.headerCode || '',
+            bodyCode: l.bodyCode || '',
+            footerCode: l.footerCode || ''
+        })) || []
+    };
+
+    return (
+        <div className="p-6 md:p-10 max-w-4xl mx-auto">
+            <button onClick={onCancel} className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors mb-8">
+                <ArrowLeft className="w-4 h-4" /> Back to Question Bank
+            </button>
+            <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Edit Question</h1>
+            <Card>
+                <CardContent className="pt-6">
+                    <QuestionForm 
+                        onSubmit={onUpdate} 
+                        onCancel={onCancel} 
+                        initialData={formattedQuestion}
+                    />
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
 export const QuestionBank = () => {
     const { data: questions, isLoading } = useQuestions();
     const createMutation = useCreateQuestion();
+    const updateMutation = useUpdateQuestion();
     const deleteMutation = useDeleteQuestion();
 
     const [isCreating, setIsCreating] = useState(false);
+    const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
     const [viewingQuestionId, setViewingQuestionId] = useState<string | null>(null);
 
     const handleCreate = (data: any) => {
@@ -294,6 +353,17 @@ export const QuestionBank = () => {
                 setIsCreating(false);
             },
             onError: () => toast.error('Failed to create question')
+        });
+    };
+
+    const handleUpdate = (data: any) => {
+        if (!editingQuestionId) return;
+        updateMutation.mutate({ id: editingQuestionId, data }, {
+            onSuccess: () => {
+                toast.success('Question updated successfully');
+                setEditingQuestionId(null);
+            },
+            onError: () => toast.error('Failed to update question')
         });
     };
 
@@ -325,6 +395,10 @@ export const QuestionBank = () => {
                 </Card>
             </div>
         );
+    }
+
+    if (editingQuestionId) {
+        return <EditQuestion id={editingQuestionId} onCancel={() => setEditingQuestionId(null)} onUpdate={handleUpdate} />;
     }
 
     if (viewingQuestionId) {
@@ -373,6 +447,13 @@ export const QuestionBank = () => {
                                     <Button size="sm" variant="outline" onClick={() => setViewingQuestionId(q.id)} className="flex-1 gap-1.5">
                                         <Eye className="w-3.5 h-3.5" /> View
                                     </Button>
+                                    <button
+                                        onClick={() => setEditingQuestionId(q.id)}
+                                        className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Edit question"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
                                     <button
                                         onClick={() => handleDelete(q.id, q.title)}
                                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
